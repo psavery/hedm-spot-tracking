@@ -9,6 +9,7 @@ class TrackedSpot:
     x: float
     y: float
     w: float
+    frame_index: int
     missing_count: int
 
     @property
@@ -50,7 +51,7 @@ class SpotTracker:
 
         return dx * dy / (w1 * w1 + w2 * w2 - dx * dy)
 
-    def track_spots(self, spots: np.ndarray) -> np.ndarray:
+    def track_spots(self, spots: np.ndarray, frame_index: int) -> np.ndarray:
         """
         Compares the spots to the currently tracked spots and updates the current spots with the new ones.
 
@@ -75,11 +76,12 @@ class SpotTracker:
                     spot.x = x
                     spot.y = y
                     spot.w = w
+                    spot.frame_index = frame_index
                     spot.missing_count = 0
                     self.spot_index.insert(hit, spot.bounding_box)
                     break
             else:
-                self.current_spots[self.next_id] = TrackedSpot(x, y, w, 0)
+                self.current_spots[self.next_id] = TrackedSpot(x, y, w, frame_index, 0)
                 self.spot_index.insert(self.next_id, bounding_box)
                 self.next_id += 1
 
