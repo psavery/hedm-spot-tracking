@@ -24,7 +24,7 @@ class TrackedSpot:
 
 class SpotTracker:
     def __init__(
-        self, overlap_threshold: float = 0.5, missing_frame_threshold: int = 1
+        self, overlap_threshold: float = 0.001, missing_frame_threshold: int = 1
     ):
         self.overlap_threshold = overlap_threshold
         self.missing_frame_threshold = missing_frame_threshold
