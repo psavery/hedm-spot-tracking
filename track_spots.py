@@ -21,16 +21,16 @@ from spot_tracker import SpotTracker, TrackedSpot
 cache_spots = True
 
 # Filenames
-instr_file = 'dual_dexelas_composite.yml'
+instr_file = "dual_dexelas_composite.yml"
 image_files = {
-    'ff1': 'mruby-0129_000004_ff1_000012-cachefile.npz',
-    'ff2': 'mruby-0129_000004_ff2_000012-cachefile.npz',
+    "ff1": "mruby-0129_000004_ff1_000012-cachefile.npz",
+    "ff2": "mruby-0129_000004_ff2_000012-cachefile.npz",
 }
-materials_file = 'ruby.h5'
-grain_params_file = 'grain_params.npy'
+materials_file = "ruby.h5"
+grain_params_file = "grain_params.npy"
 
 # Load the instrument
-with open(instr_file, 'r') as rf:
+with open(instr_file, "r") as rf:
     conf = yaml.safe_load(rf)
 
 instr = HEDMInstrument(conf)
@@ -38,11 +38,11 @@ instr = HEDMInstrument(conf)
 # Load in the raw imageseries for each Dexela detector
 raw_ims_dict = {}
 for k, filename in image_files.items():
-    raw_ims_dict[k] = imageseries.open(filename, 'frame-cache')
+    raw_ims_dict[k] = imageseries.open(filename, "frame-cache")
 
 # Grab the number of images and the omega period
 num_images = len(raw_ims_dict[k])
-omegas = raw_ims_dict[k].metadata['omega']
+omegas = raw_ims_dict[k].metadata["omega"]
 omega_period = np.radians((omegas[0][0], omegas[-1][1]))
 eta_period = (-np.pi, np.pi)
 
@@ -53,15 +53,17 @@ omega_ranges = [omega_period]
 # Break up the imageseries into their subpanels
 ims_dict = {}
 for det_key, panel in instr.detectors.items():
-    ops = [('rectangle', panel.roi), ]
+    ops = [
+        ("rectangle", panel.roi),
+    ]
 
     raw_key = det_key[:3]
     ims = raw_ims_dict[raw_key]
     ims_dict[det_key] = ProcessedImageSeries(ims, ops)
 
 # Load the material
-with h5py.File(materials_file, 'r') as rf:
-    material = load_materials_hdf5(rf)['ruby']
+with h5py.File(materials_file, "r") as rf:
+    material = load_materials_hdf5(rf)["ruby"]
 
 plane_data = material.planeData
 
@@ -71,17 +73,17 @@ grain_params = np.load(grain_params_file)
 # Find and track the spots in the raw images
 finder = SpotFinder()
 spot_trackers = {
-    'ff1': SpotTracker(),
-    'ff2': SpotTracker(),
+    "ff1": SpotTracker(),
+    "ff2": SpotTracker(),
 }
 all_spots = {
-    'ff1': {},
-    'ff2': {},
+    "ff1": {},
+    "ff2": {},
 }
 
-if cache_spots and Path('spots_cached.pkl').exists():
+if cache_spots and Path("spots_cached.pkl").exists():
     # Just load the cached results...
-    with open('spots_cached.pkl', 'rb') as rf:
+    with open("spots_cached.pkl", "rb") as rf:
         all_spots = pickle.load(rf)
 else:
     for frame_index in range(num_images):
@@ -101,7 +103,7 @@ else:
                 spot_list.append(copy.deepcopy(spot))
 
     if cache_spots:
-        with open('spots_cached.pkl', 'wb') as wf:
+        with open("spots_cached.pkl", "wb") as wf:
             pickle.dump(all_spots, wf)
 
 
@@ -116,11 +118,11 @@ def compute_mean_spot(spot_list: list[TrackedSpot]) -> np.ndarray:
     # the weighted averages than the width of the spot.
     # We are then doing the full omega ranges of the frames as the omega
     # width (we can probably do something a little better than that).
-    omega_ranges = np.radians([omegas[x.frame_index] for x in spot_list])
+    omega_ranges = np.radians([omegas[s.frame_index] for s in spot_list])
     omega_values = [np.mean(x) for x in omega_ranges]
-    widths = np.array([x.w for x in spot_list])
+    widths = np.array([s.w for s in spot_list])
     max_width = widths.max()
-    coords = np.array([(x.x, x.y) for x in spot_list])
+    coords = np.array([(s.i, s.j) for s in spot_list])
 
     # We are using a width-weighted omega as the average omega, currently
     width_weighted_omega = (omega_values * widths).sum() / (widths.sum())
@@ -161,9 +163,8 @@ for mono_det_key, array in spot_arrays.items():
             continue
 
         # Extract all spots that belong to this subpanel
-        on_panel_rows = (
-            in_range(array[:, 0], panel.roi[1]) &
-            in_range(array[:, 1], panel.roi[0])
+        on_panel_rows = in_range(array[:, 0], panel.roi[1]) & in_range(
+            array[:, 1], panel.roi[0]
         )
         if np.any(on_panel_rows):
             # Extract the spots on the subpanel
@@ -273,9 +274,9 @@ for det_key, sim_results in simulated_results.items():
             # not paired with HKLs. That might be okay, because
             # we might have not simulated all of the HKLs.
             print(
-                f'For grain {grain_id} on detector {det_key}, did not '
-                'pair these spots with HKLs:',
-                skipped_spots
+                f"For grain {grain_id} on detector {det_key}, did not "
+                "pair these spots with HKLs:",
+                skipped_spots,
             )
 
         assigned_spots = np.asarray(assigned_spots)
@@ -288,8 +289,9 @@ for det_key, sim_results in simulated_results.items():
             # This means two different HKLs were assigned to the same spot.
             # We'll definitely have to figure out what to do about this...
             print(
-                f'WARNING!!! {grain_id} on detector {det_key}, '
-                'some spots were assigned twice!', counts[counts > 1]
+                f"WARNING!!! {grain_id} on detector {det_key}, "
+                "some spots were assigned twice!",
+                counts[counts > 1],
             )
 
         cart_spot_coords = np.empty((len(assigned_spots), 3))
@@ -306,16 +308,16 @@ for det_key, sim_results in simulated_results.items():
         # Store our assignments. `hkls[i]` is the HKL that corresponds
         # to both `sim_xys[i]`, `meas_xys[i]`, and `meas_angs[i]`
         grain_hkl_assignments[grain_id] = {
-            'hkls': sim_hkls[keep_hkls],
-            'sim_xys': sim_xys[keep_hkls],
-            'meas_xys': cart_spot_coords,
-            'assigned_spots': assigned_spots,
-            'meas_angs': meas_angs,
+            "hkls": sim_hkls[keep_hkls],
+            "sim_xys": sim_xys[keep_hkls],
+            "meas_xys": cart_spot_coords,
+            "assigned_spots": assigned_spots,
+            "meas_angs": meas_angs,
         }
 
 # Compare with output from hexrdgui pull_spots()
 # The `pull_spots()` output is the "reference output"
-with open('spots_data_dict_from_hexrdgui.pkl', 'rb') as rf:
+with open("spots_data_dict_from_hexrdgui.pkl", "rb") as rf:
     ref_spots_dict = pickle.load(rf)
 
 # Keep track of which HKLs from `pull_spots()` were matched or
@@ -335,7 +337,7 @@ for grain_id, (ref_completeness, ref_grain_spots) in ref_spots_dict.items():
 
         # Keep track of which spots were assigned and which were not
         assigned_spots.setdefault(det_key, {})
-        these_assigned_spots = np.zeros(len(meas_spots['hkls']), dtype=bool)
+        these_assigned_spots = np.zeros(len(meas_spots["hkls"]), dtype=bool)
         assigned_spots[det_key][grain_id] = these_assigned_spots
 
         for ref_spot in ref_det_spots:
@@ -347,28 +349,26 @@ for grain_id, (ref_completeness, ref_grain_spots) in ref_spots_dict.items():
             ref_meas_xy = ref_spot[7]
 
             matching_idx = -1
-            for row in range(len(meas_spots['hkls'])):
-                if np.array_equal(meas_spots['hkls'][row], hkl):
+            for row in range(len(meas_spots["hkls"])):
+                if np.array_equal(meas_spots["hkls"][row], hkl):
                     # Found a matching HKL!
                     matching_idx = row
                     break
 
             if matching_idx == -1:
-                print(
-                    f'Warning! Did not find a match on {det_key} for HKL: {hkl}'
-                )
+                print(f"Warning! Did not find a match on {det_key} for HKL: {hkl}")
                 num_unmatched += 1
                 continue
 
             # Compute the distance between the reference measured xy and
             # our own measured xy
             distance = np.sqrt(
-                ((ref_meas_xy - meas_spots['meas_xys'][matching_idx][:2])**2).sum()
+                ((ref_meas_xy - meas_spots["meas_xys"][matching_idx][:2]) ** 2).sum()
             )
             distances.append(distance)
 
             # Compute the difference in omega between the reference and ours
-            ome_diff = abs(ref_omega - meas_spots['meas_xys'][matching_idx][2])
+            ome_diff = abs(ref_omega - meas_spots["meas_xys"][matching_idx][2])
             max_omega_diff = max(ome_diff, max_omega_diff)
 
             # Indicate this spot was assigned
@@ -379,19 +379,21 @@ for grain_id, (ref_completeness, ref_grain_spots) in ref_spots_dict.items():
 max_distance = max(distances)
 percent_found = num_matched / (num_matched + num_unmatched) * 100
 print(
-    'Percentage of spots that `pull_spots()` found that we also found:',
-    f'{percent_found:.2f}%'
+    "Percentage of spots that `pull_spots()` found that we also found:",
+    f"{percent_found:.2f}%",
 )
 
-print(f'Mean distance (xy): {np.mean(distances):.4f}')
-print(f'Max distance (xy): {max_distance:.4f}')
-print(f'Max omega diff: {max_omega_diff:.4f}')
+print(f"Mean distance (xy): {np.mean(distances):.4f}")
+print(f"Max distance (xy): {max_distance:.4f}")
+print(f"Max omega diff: {max_omega_diff:.4f}")
 num_extra_hkls = 0
 for det_key, det_assignments in assigned_spots.items():
     for grain_id, grain_assignments in det_assignments.items():
         if np.any(~grain_assignments):
-            extra_hkls = det_hkl_assignments[det_key][grain_id]['hkls'][~grain_assignments]
+            extra_hkls = det_hkl_assignments[det_key][grain_id]["hkls"][
+                ~grain_assignments
+            ]
             num_extra_hkls += len(extra_hkls)
             # print('Extra HKLs:', extra_hkls)
 
-print('Number of HKLs we found that `pull_spots()` did not find:', num_extra_hkls)
+print("Number of HKLs we found that `pull_spots()` did not find:", num_extra_hkls)
