@@ -16,19 +16,12 @@ class Spot:
     '''The column pixel coordinate of the spot: img[i, j]'''
     w: int
     '''The full width of the bounding box of the spot'''
+    bounding_box: tuple[int, int, int, int]
+    '''The bounding box of the spot: (rmin, rmax, cmin, cmax)'''
     max: float
     '''The maximum pixel value in the spot'''
     sum: float
     '''The sum of all pixel values in the spot'''
-
-    @property
-    def bounding_box(self):
-        return (
-            self.i - self.w / 2,
-            self.j - self.w / 2,
-            self.i + self.w / 2,
-            self.j + self.w / 2,
-        )
 
 
 def bbox2(img):
@@ -37,7 +30,7 @@ def bbox2(img):
     rmin, rmax = np.where(rows)[0][[0, -1]]
     cmin, cmax = np.where(cols)[0][[0, -1]]
 
-    return rmin, rmax, cmin, cmax
+    return rmin, cmin, rmax, cmax
 
 
 class SpotFinder:
@@ -91,8 +84,25 @@ class SpotFinder:
 
             pixels = img[li : hi + 1, lj : hj + 1]
 
+            labels, n = label(pixels)  # type: ignore
+            counts = [np.count_nonzero(labels == i) for i in range(1, n + 1)]
+            l = np.argmax(counts) + 1
+            mask = labels == l
+
+            i, j = np.unravel_index(np.argmax(pixels), pixels.shape)
+            i += li
+            j += lj
+
+            bbox = np.array(bbox2(mask)) + np.array([li, lj, li, lj])
             spots.append(
-                Spot(int(i), int(j), w * 2, np.max(pixels), np.sum(pixels))
+                Spot(
+                    int(i),
+                    int(j),
+                    w * 2,
+                    tuple(bbox),
+                    np.max(pixels[mask]),
+                    np.sum(pixels[mask]),
+                )
             )
 
         LOGGER.debug('Detected %d blobs', len(spots))
