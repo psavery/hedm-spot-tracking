@@ -2,8 +2,32 @@ import logging
 
 import cv2
 import numpy as np
+from dataclasses import dataclass
 
 LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class Spot:
+    i: int
+    '''The row pixel coordinate of the spot: img[i, j]'''
+    j: int
+    '''The column pixel coordinate of the spot: img[i, j]'''
+    w: int
+    '''The full width of the bounding box of the spot'''
+    max: float
+    '''The maximum pixel value in the spot'''
+    sum: float
+    '''The sum of all pixel values in the spot'''
+
+    @property
+    def bounding_box(self):
+        return (
+            self.i - self.w / 2,
+            self.j - self.w / 2,
+            self.i + self.w / 2,
+            self.j + self.w / 2,
+        )
 
 
 class SpotFinder:
@@ -19,14 +43,14 @@ class SpotFinder:
         self.min = min_area
         self.max = max_area
 
-    def find_spots(self, img: np.ndarray) -> np.ndarray:
-        """
+    def find_spots(self, img: np.ndarray) -> list[Spot]:
+        '''
         Finds blobs in the image using the configured parameters via either blob_log or blob_dog
 
         Returns the blobs found in the image as coordinates and widths
 
-        Returns: [i, j, w] where i and j are the coordinates of the center of each blob and w is the width
-        """
+        Returns: A list of the spots found in the image
+        '''
         binary_image = img / np.max(img) > self.threshold
 
         params = cv2.SimpleBlobDetector_Params()  # type: ignore
@@ -41,12 +65,17 @@ class SpotFinder:
         params.filterByInertia = False
 
         detector = cv2.SimpleBlobDetector_create(params)  # type: ignore
-        LOGGER.debug("Detecting blobs")
+        LOGGER.debug('Detecting blobs')
         keypoints = detector.detect(binary_image.astype(np.uint8) * 255)
-        blobs = np.array([[kp.pt[0], kp.pt[1], kp.size] for kp in keypoints])
-        LOGGER.debug("Detected %d blobs", len(blobs))
-        if len(blobs) == 0:
-            return blobs
-        blobs[:, 2] = blobs[:, 2] * np.sqrt(2)  # Convert sigma to width
 
-        return blobs
+        spots: list[Spot] = []
+        for kp in keypoints:
+            j, i = kp.pt
+            w = kp.size * np.sqrt(2) / 2
+            w = int(np.round(w))
+
+            pixels = img[i - w : i + w, j - w : j + w]
+            spots.append(Spot(i, j, w, np.max(pixels), np.sum(pixels)))
+
+        LOGGER.debug('Detected %d blobs', len(spots))
+        return spots
