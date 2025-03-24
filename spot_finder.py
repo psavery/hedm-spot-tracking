@@ -17,7 +17,7 @@ class Spot:
     w: int
     '''The full width of the bounding box of the spot'''
     bounding_box: tuple[int, int, int, int]
-    '''The bounding box of the spot: (rmin, rmax, cmin, cmax)'''
+    '''The bounding box of the spot: (rmin, cmin, rmax, cmax)'''
     max: float
     '''The maximum pixel value in the spot'''
     sum: float
