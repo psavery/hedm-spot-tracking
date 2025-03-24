@@ -20,6 +20,8 @@ class TrackedSpot(Spot):
         self.i = spot.i
         self.j = spot.j
         self.w = spot.w
+        self.max = spot.max
+        self.sum = spot.sum
         self.frame_index = frame_index
         self.missing_count = 0
 

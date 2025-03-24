@@ -72,9 +72,11 @@ class SpotFinder:
         for kp in keypoints:
             j, i = kp.pt
             w = kp.size * np.sqrt(2) / 2
-            w = int(np.round(w))
 
-            pixels = img[i - w : i + w, j - w : j + w]
+            pixels = img[
+                max(int(np.round(i - w)), 0) : int(np.round(i + w)),
+                max(int(np.round(j - w)), 0) : int(np.round(j + w)),
+            ]
             spots.append(Spot(i, j, w, np.max(pixels), np.sum(pixels)))
 
         LOGGER.debug('Detected %d blobs', len(spots))

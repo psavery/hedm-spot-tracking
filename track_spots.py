@@ -122,7 +122,8 @@ def compute_mean_spot(spot_list: list[TrackedSpot]) -> np.ndarray:
     omega_values = [np.mean(x) for x in omega_ranges]
     widths = np.array([s.w for s in spot_list])
     max_width = widths.max()
-    coords = np.array([(s.i, s.j) for s in spot_list])
+    # FIXME: we need to take another look at `i, j` ordering
+    coords = np.array([(s.j, s.i) for s in spot_list])
 
     # We are using a width-weighted omega as the average omega, currently
     width_weighted_omega = (omega_values * widths).sum() / (widths.sum())
@@ -237,6 +238,7 @@ for det_key, sim_results in simulated_results.items():
     # grain centroid shifts. It's more accurate to compute the angles from
     # the xys.
 
+    detector_assigned_spots = []
     grain_hkl_assignments = det_hkl_assignments.setdefault(det_key, {})
     for grain_id, sim_xys in enumerate(sim_all_xys):
         sim_omegas = sim_results[2][grain_id][:, 2]
@@ -296,6 +298,11 @@ for det_key, sim_results in simulated_results.items():
                 counts[counts > 1],
             )
 
+        # Keep track of all spots assigned on this detector, so
+        # we can figure out if any spots were assigned to multiple
+        # grains.
+        detector_assigned_spots.append(assigned_indices_sorted)
+
         cart_spot_coords = np.empty((len(assigned_spots), 3))
         meas_angs = np.empty((len(assigned_spots), 3))
         if assigned_spots.size != 0:
@@ -316,6 +323,21 @@ for det_key, sim_results in simulated_results.items():
             'assigned_spots': assigned_spots,
             'meas_angs': meas_angs,
         }
+
+    # Check if any spots assigned to HKLs from one grain were also assigned
+    # to HKLs on another grain
+    detector_assigned_indices_sorted, counts = np.unique(
+        np.hstack(detector_assigned_spots),
+        return_counts=True,
+    )
+    if np.any(counts > 1):
+        # FIXME: better handling here
+        print(
+            f'WARNING!!! On detector {det_key}, '
+            'some spots were assigned to multiple grains!',
+            counts[counts > 1],
+        )
+
 
 # Compare with output from hexrdgui pull_spots()
 # The `pull_spots()` output is the 'reference output'
