@@ -3,6 +3,7 @@ import logging
 import cv2
 import numpy as np
 from dataclasses import dataclass
+from scipy.ndimage import label
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,15 @@ class Spot:
             self.i + self.w / 2,
             self.j + self.w / 2,
         )
+
+
+def bbox2(img):
+    rows = np.any(img, axis=1)
+    cols = np.any(img, axis=0)
+    rmin, rmax = np.where(rows)[0][[0, -1]]
+    cmin, cmax = np.where(cols)[0][[0, -1]]
+
+    return rmin, rmax, cmin, cmax
 
 
 class SpotFinder:
@@ -71,13 +81,19 @@ class SpotFinder:
         spots: list[Spot] = []
         for kp in keypoints:
             j, i = kp.pt
-            w = kp.size * np.sqrt(2) / 2
 
-            pixels = img[
-                max(int(np.round(i - w)), 0) : int(np.round(i + w)),
-                max(int(np.round(j - w)), 0) : int(np.round(j + w)),
-            ]
-            spots.append(Spot(i, j, w, np.max(pixels), np.sum(pixels)))
+            w = kp.size
+
+            li = max(0, int(np.round(i - w)))
+            hi = min(img.shape[0] - 1, int(np.round(i + w)))
+            lj = max(0, int(np.round(j - w)))
+            hj = min(img.shape[1] - 1, int(np.round(j + w)))
+
+            pixels = img[li : hi + 1, lj : hj + 1]
+
+            spots.append(
+                Spot(int(i), int(j), w * 2, np.max(pixels), np.sum(pixels))
+            )
 
         LOGGER.debug('Detected %d blobs', len(spots))
         return spots

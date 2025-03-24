@@ -166,16 +166,16 @@ for mono_det_key, array in spot_arrays.items():
             continue
 
         # Extract all spots that belong to this subpanel
-        on_panel_rows = in_range(array[:, 0], panel.roi[1]) & in_range(
-            array[:, 1], panel.roi[0]
+        on_panel_rows = in_range(array[:, 1], panel.roi[1]) & in_range(
+            array[:, 0], panel.roi[0]
         )
         if np.any(on_panel_rows):
             # Extract the spots on the subpanel
             subpanel_array = array[on_panel_rows]
 
             # Adjust the i, j coordinates for this subpanel
-            subpanel_array[:, 0] -= panel.roi[1][0]
-            subpanel_array[:, 1] -= panel.roi[0][0]
+            subpanel_array[:, 1] -= panel.roi[1][0]
+            subpanel_array[:, 0] -= panel.roi[0][0]
             subpanel_spot_arrays[det_key] = subpanel_array
 
 # Compute tth, eta for the spot arrays
@@ -186,7 +186,7 @@ for det_key, array in subpanel_spot_arrays.items():
     panel = instr.detectors[det_key]
 
     # First convert to cartesian
-    xys = panel.pixelToCart(array[:, [1, 0]])
+    xys = panel.pixelToCart(array[:, :2])
 
     # Next convert to angles. Apply the distortion.
     ang_crds, _ = panel.cart_to_angles(
@@ -307,7 +307,7 @@ for det_key, sim_results in simulated_results.items():
         meas_angs = np.empty((len(assigned_spots), 3))
         if assigned_spots.size != 0:
             cart_spot_coords[:, :2] = panel.pixelToCart(
-                raw_spot_coords[assigned_spots][:, [1, 0]]
+                raw_spot_coords[assigned_spots][:, [0, 1]]
             )
             cart_spot_coords[:, 2] = raw_spot_coords[assigned_spots, 2]
             meas_angs = ang_spot_coords[assigned_spots]
