@@ -122,8 +122,7 @@ def compute_mean_spot(spot_list: list[TrackedSpot]) -> np.ndarray:
     omega_values = [np.mean(x) for x in omega_ranges]
     widths = np.array([s.w for s in spot_list])
     max_width = widths.max()
-    # FIXME: we need to take another look at `i, j` ordering
-    coords = np.array([(s.j, s.i) for s in spot_list])
+    coords = np.array([(s.i, s.j) for s in spot_list])
 
     # We are using a width-weighted omega as the average omega, currently
     width_weighted_omega = (omega_values * widths).sum() / (widths.sum())
