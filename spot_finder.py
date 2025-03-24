@@ -29,7 +29,6 @@ def bbox2(img):
     cols = np.any(img, axis=0)
     rmin, rmax = np.where(rows)[0][[0, -1]]
     cmin, cmax = np.where(cols)[0][[0, -1]]
-
     return rmin, cmin, rmax, cmax
 
 
