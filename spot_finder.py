@@ -10,15 +10,15 @@ LOGGER = logging.getLogger(__name__)
 @dataclass
 class Spot:
     i: int
-    """The row pixel coordinate of the spot: img[i, j]"""
+    '''The row pixel coordinate of the spot: img[i, j]'''
     j: int
-    """The column pixel coordinate of the spot: img[i, j]"""
+    '''The column pixel coordinate of the spot: img[i, j]'''
     w: int
-    """The full width of the bounding box of the spot"""
+    '''The full width of the bounding box of the spot'''
     max: float
-    """The maximum pixel value in the spot"""
+    '''The maximum pixel value in the spot'''
     sum: float
-    """The sum of all pixel values in the spot"""
+    '''The sum of all pixel values in the spot'''
 
     @property
     def bounding_box(self):
@@ -44,13 +44,13 @@ class SpotFinder:
         self.max = max_area
 
     def find_spots(self, img: np.ndarray) -> list[Spot]:
-        """
+        '''
         Finds blobs in the image using the configured parameters via either blob_log or blob_dog
 
         Returns the blobs found in the image as coordinates and widths
 
         Returns: A list of the spots found in the image
-        """
+        '''
         binary_image = img / np.max(img) > self.threshold
 
         params = cv2.SimpleBlobDetector_Params()  # type: ignore
@@ -65,7 +65,7 @@ class SpotFinder:
         params.filterByInertia = False
 
         detector = cv2.SimpleBlobDetector_create(params)  # type: ignore
-        LOGGER.debug("Detecting blobs")
+        LOGGER.debug('Detecting blobs')
         keypoints = detector.detect(binary_image.astype(np.uint8) * 255)
 
         spots: list[Spot] = []
@@ -77,5 +77,5 @@ class SpotFinder:
             pixels = img[i - w : i + w, j - w : j + w]
             spots.append(Spot(i, j, w, np.max(pixels), np.sum(pixels)))
 
-        LOGGER.debug("Detected %d blobs", len(spots))
+        LOGGER.debug('Detected %d blobs', len(spots))
         return spots

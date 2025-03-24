@@ -12,7 +12,9 @@ class TrackedSpot(Spot):
 
     @staticmethod
     def from_spot(spot: Spot, frame_index: int):
-        return TrackedSpot(spot.i, spot.j, spot.w, spot.max, spot.sum, frame_index, 0)
+        return TrackedSpot(
+            spot.i, spot.j, spot.w, spot.max, spot.sum, frame_index, 0
+        )
 
     def update(self, spot: Spot, frame_index: int):
         self.i = spot.i
@@ -24,7 +26,9 @@ class TrackedSpot(Spot):
 
 class SpotTracker:
     def __init__(
-        self, overlap_threshold: float = 0.001, missing_frame_threshold: int = 1
+        self,
+        overlap_threshold: float = 0.001,
+        missing_frame_threshold: int = 1,
     ):
         self.overlap_threshold = overlap_threshold
         self.missing_frame_threshold = missing_frame_threshold
@@ -36,9 +40,9 @@ class SpotTracker:
         self.spot_index = rtree.index.Index()
 
     def overlap(self, a: Spot, b: Spot) -> float:
-        """
+        '''
         Returns the fraction of overlap between two rectangles given by their center and width
-        """
+        '''
 
         i1, j1, w1 = a.i, a.j, a.w
         i2, j2, w2 = b.i, b.j, b.w
@@ -56,11 +60,11 @@ class SpotTracker:
     def track_spots(
         self, spots: list[Spot], frame_index: int
     ) -> list[tuple[int, TrackedSpot]]:
-        """
+        '''
         Compares the spots to the currently tracked spots and updates the current spots with the new ones.
 
         Returns the currently tracked spots and their ids.
-        """
+        '''
 
         for spot in spots:
             hits = list(self.spot_index.intersection(spot.bounding_box))
