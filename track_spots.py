@@ -71,7 +71,7 @@ plane_data = material.planeData
 grain_params = np.load(grain_params_file)
 
 # Find and track the spots in the raw images
-finder = SpotFinder()
+finder = SpotFinder(min_area=2)
 spot_trackers = {
     'ff1': SpotTracker(),
     'ff2': SpotTracker(),
