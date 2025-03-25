@@ -13,7 +13,14 @@ class TrackedSpot(Spot):
     @staticmethod
     def from_spot(spot: Spot, frame_index: int):
         return TrackedSpot(
-            spot.i, spot.j, spot.w, spot.max, spot.sum, frame_index, 0
+            spot.i,
+            spot.j,
+            spot.w,
+            spot.bounding_box,
+            spot.max,
+            spot.sum,
+            frame_index,
+            0,
         )
 
     def update(self, spot: Spot, frame_index: int):
