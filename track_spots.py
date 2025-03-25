@@ -19,6 +19,7 @@ from spot_tracker import SpotTracker, TrackedSpot
 # If we change anything that would change spot detection or tracking, this
 # should be disabled.
 cache_spots = True
+plot_comparison = False
 
 # Filenames
 instr_file = 'dual_dexelas_composite.yml'
@@ -109,21 +110,13 @@ else:
 
 # Compute x, y, w, omega, and omega width for every spot
 def compute_mean_spot(spot_list: list[TrackedSpot]) -> np.ndarray:
-    # FIXME: we should review how we are computing the omega value for
-    # the 3D spot, as well as the omega width.
-    # Right now we are doing a width-weighted average for the omega value.
-    # This seems to come up with a somewhat close answer as to what
-    # `pull_spots()` produced before.
-    # But, summed intensities of the spots might be a better weight for
-    # the weighted averages than the width of the spot.
-    # We are then doing the full omega ranges of the frames as the omega
-    # width (we can probably do something a little better than that).
     omega_ranges = np.radians([omegas[s.frame_index] for s in spot_list])
     omega_values = [np.mean(x) for x in omega_ranges]
     sums = np.array([s.sum for s in spot_list])
     widths = np.array([s.w for s in spot_list])
     max_width = widths.max()
     coords = np.array([(s.i, s.j) for s in spot_list])
+    n_frames = len(spot_list)
 
     # We are using a width-weighted omega as the average omega, currently
     sum_weighted_omega = (omega_values * sums).sum() / (sums.sum())
@@ -134,7 +127,7 @@ def compute_mean_spot(spot_list: list[TrackedSpot]) -> np.ndarray:
     # We are using the full range of omegas
     omega_width = (omega_ranges[-1][1] - omega_ranges[0][0]) / 2
     return np.asarray(
-        (*sum_weighted_coords, max_width, sum_weighted_omega, omega_width)
+        (*sum_weighted_coords, max_width, sum_weighted_omega, omega_width, n_frames)
     )
 
 
@@ -143,7 +136,7 @@ def compute_mean_spot(spot_list: list[TrackedSpot]) -> np.ndarray:
 # and omega values.
 spot_arrays = {}
 for det_key, spots_dict in all_spots.items():
-    array = np.empty((len(spots_dict), 5), dtype=float)
+    array = np.empty((len(spots_dict), 6), dtype=float)
     for i, spot_list in enumerate(spots_dict.values()):
         array[i] = compute_mean_spot(spot_list)
 
@@ -229,6 +222,7 @@ for det_key, sim_results in simulated_results.items():
     # 0 is tth, 1 is eta, and 3 is omega
     ang_spot_coords = ang_spots[:, [0, 1, 3]]
     raw_spot_coords = subpanel_spot_arrays[det_key][:, [0, 1, 3]]
+    num_frames = subpanel_spot_arrays[det_key][:, 5]
 
     # Grab some simulated HKLs
     sim_all_hkls = sim_results[1]
@@ -255,7 +249,7 @@ for det_key, sim_results in simulated_results.items():
 
         # Create the hkl assignments array
         hkl_assignments = np.full(len(sim_hkls), -1, dtype=int)
-        skipped_spots = []
+        skipped_hkls = []
         assigned_spots = []
         for i, ang_crd in enumerate(angles):
             # Find the closest spot
@@ -265,22 +259,23 @@ for det_key, sim_results in simulated_results.items():
 
             # Verify that the differences are within the tolerances
             if not np.all(differences[min_idx] < tolerances):
-                # Skip this spot!!!
-                skipped_spots.append(min_idx)
+                # Not within the tolerance...
+                skipped_hkls.append(sim_hkls[i])
                 continue
 
             hkl_assignments[i] = min_idx
             assigned_spots.append(min_idx)
 
-        if skipped_spots:
+        if skipped_hkls:
             # FIXME: better handling here
             # This just means we identified some spots that were
             # not paired with HKLs. That might be okay, because
             # we might have not simulated all of the HKLs.
             print(
                 f'For grain {grain_id} on detector {det_key}, did not '
-                'pair these spots with HKLs:',
-                skipped_spots,
+                'find spots to match the following simulated HKLs '
+                '(perhaps they are low structure factor):',
+                [x.tolist() for x in skipped_hkls],
             )
 
         assigned_spots = np.asarray(assigned_spots)
@@ -325,9 +320,11 @@ for det_key, sim_results in simulated_results.items():
         grain_hkl_assignments[grain_id] = {
             'hkls': sim_hkls[keep_hkls],
             'sim_xys': sim_xys[keep_hkls],
+            'sim_angs': angles[keep_hkls],
             'meas_xys': cart_spot_coords,
             'assigned_spots': assigned_spots,
             'meas_angs': meas_angs,
+            'num_frames': num_frames[assigned_spots],
         }
 
     # Check if any spots assigned to HKLs from one grain were also assigned
@@ -441,3 +438,72 @@ for det_key, det_assignments in assigned_spots.items():
 print(
     'Number of HKLs we found that `pull_spots()` did not find:', num_extra_hkls
 )
+
+if not plot_comparison:
+    raise SystemExit
+
+import matplotlib.pyplot as plt
+
+for det_key, meas_spots in det_hkl_assignments.items():
+    panel = instr.detectors[det_key]
+
+    all_meas_xys = []
+    all_ref_xys = []
+    for grain_id, grain_spots in meas_spots.items():
+        meas_xys = grain_spots['meas_xys']
+        num_frames = grain_spots['num_frames']
+        hkls = grain_spots['hkls']
+
+        # Only keep spots that are on one frame so we can visualize them
+        # properly
+        keep = num_frames == 1
+        meas_xys = meas_xys[keep]
+        hkls = hkls[keep]
+
+        # Now loop over reference spots and only keep HKLs that we kept
+        # Keep them in the same order as the measured HKLs
+        ref_spots = ref_spots_dict[grain_id][1][det_key]
+        ref_meas_xys = []
+        for hkl in hkls:
+            found = False
+            for ref_spot in ref_spots:
+                ref_hkl = ref_spot[2]
+                if np.array_equal(hkl, ref_hkl):
+                    ref_meas_xy = ref_spot[7]
+                    ref_meas_xys.append(ref_meas_xy)
+                    found = True
+                    break
+
+            if not found:
+                ref_meas_xys.append((np.nan, np.nan))
+
+        all_meas_xys.append(meas_xys)
+        all_ref_xys.append(np.array(ref_meas_xys))
+
+    all_meas_xys = np.vstack(all_meas_xys)
+    all_ref_xys = np.vstack(all_ref_xys)
+
+    assert len(all_meas_xys) == len(all_ref_xys)
+
+    for i in range(num_images):
+        # Only keep spots that are on this frame
+        keep_xys = in_range(np.degrees(all_meas_xys[:, 2]), omegas[i])
+        kept_meas_xys = all_meas_xys[keep_xys]
+        kept_ref_xys = all_ref_xys[keep_xys]
+
+        if kept_meas_xys.size == 0:
+            continue
+
+        # Convert them to pixel coordinates
+        meas_ij = panel.cartToPixel(kept_meas_xys[:, :2], apply_distortion=True)[:, [1, 0]]
+        ref_ij = panel.cartToPixel(kept_ref_xys, apply_distortion=True)[:, [1, 0]]
+
+        # Now get the image
+        img = ims_dict[det_key][i]
+
+        plt.title(f'{det_key} frame {i}')
+        plt.imshow(img, vmin=0, vmax=6000, origin='lower', cmap='Grays')
+        plt.scatter(*meas_ij.T, marker='x', c='red', label='meas')
+        plt.scatter(*ref_ij.T, marker='+', c='blue', label='ref')
+        plt.legend()
+        plt.show()
