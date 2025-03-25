@@ -35,7 +35,7 @@ def bbox2(img):
 class SpotFinder:
     def __init__(
         self,
-        threshold: float = 0.0,
+        threshold: float = 25.0,
         minimum_separation: float = 1,
         min_area: int = 1,
         max_area: int = 1000,
@@ -53,7 +53,7 @@ class SpotFinder:
 
         Returns: A list of the spots found in the image
         '''
-        binary_image = img / np.max(img) > self.threshold
+        binary_image = img > self.threshold
 
         params = cv2.SimpleBlobDetector_Params()  # type: ignore
         params.filterByArea = True

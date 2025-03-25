@@ -308,6 +308,12 @@ for det_key, sim_results in simulated_results.items():
             cart_spot_coords[:, :2] = panel.pixelToCart(
                 raw_spot_coords[assigned_spots][:, [0, 1]]
             )
+            if panel.distortion is not None:
+                # Apply the distortion
+                cart_spot_coords[:, :2] = panel.distortion.apply_inverse(
+                    cart_spot_coords[:, :2]
+                )
+
             cart_spot_coords[:, 2] = raw_spot_coords[assigned_spots, 2]
             meas_angs = ang_spot_coords[assigned_spots]
 
@@ -370,6 +376,11 @@ for grain_id, (ref_completeness, ref_grain_spots) in ref_spots_dict.items():
             ref_meas_angs = ref_spot[6]
             ref_omega = ref_meas_angs[2]
             ref_meas_xy = ref_spot[7]
+
+            if np.any(np.isnan(ref_meas_xy)):
+                # This is not a real spot...
+                # I don't know why `pull_spots()` sometimes does this...
+                continue
 
             matching_idx = -1
             for row in range(len(meas_spots['hkls'])):
