@@ -3,7 +3,7 @@ import logging
 import cv2
 import numpy as np
 from dataclasses import dataclass
-from scipy.ndimage import label
+from scipy.ndimage import label, center_of_mass
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,54 +55,35 @@ class SpotFinder:
         '''
         binary_image = img > self.threshold
 
-        params = cv2.SimpleBlobDetector_Params()  # type: ignore
-        params.filterByArea = True
-        params.minArea = self.min
-        params.maxArea = self.max
-        params.minDistBetweenBlobs = self.minimal_separation
-
-        params.filterByCircularity = False
-        params.filterByColor = False
-        params.filterByConvexity = False
-        params.filterByInertia = False
-
-        detector = cv2.SimpleBlobDetector_create(params)  # type: ignore
-        LOGGER.debug('Detecting blobs')
-        keypoints = detector.detect(binary_image.astype(np.uint8) * 255)
-
+        _n, all_labels, stats, _binary_centroids = (
+            cv2.connectedComponentsWithStats(
+                binary_image.astype(np.uint8), connectivity=8
+            )
+        )
         spots: list[Spot] = []
-        for kp in keypoints:
-            j, i = kp.pt
-
-            w = kp.size
-
-            li = max(0, int(np.round(i - w)))
-            hi = min(img.shape[0] - 1, int(np.round(i + w)))
-            lj = max(0, int(np.round(j - w)))
-            hj = min(img.shape[1] - 1, int(np.round(j + w)))
-
-            pixels = img[li : hi + 1, lj : hj + 1]
-
-            labels, n = label(pixels)  # type: ignore
-            counts = [np.count_nonzero(labels == i) for i in range(1, n + 1)]
-            l = np.argmax(counts) + 1
+        for l, (lj, li, dj, di, area) in enumerate(stats):
+            if not (self.min <= area <= self.max):
+                continue
+            pixels = img[li : li + di, lj : lj + dj]
+            labels = all_labels[li : li + di, lj : lj + dj]
             mask = labels == l
 
-            i, j = np.unravel_index(np.argmax(pixels), pixels.shape)
+            i: int
+            j: int
+            i, j = center_of_mass(pixels, labels, l)  # type: ignore
+
             i += li
             j += lj
 
-            bbox = np.array(bbox2(mask)) + np.array([li, lj, li, lj])
             spots.append(
                 Spot(
                     int(i),
                     int(j),
-                    w * 2,
-                    tuple(bbox),
+                    max(di, dj),
+                    (li, lj, li + di, lj + dj),
                     np.max(pixels[mask]),
                     np.sum(pixels[mask]),
                 )
             )
-
         LOGGER.debug('Detected %d blobs', len(spots))
         return spots
