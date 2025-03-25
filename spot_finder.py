@@ -62,6 +62,8 @@ class SpotFinder:
         )
         spots: list[Spot] = []
         for l, (lj, li, dj, di, area) in enumerate(stats):
+            if l == 0:
+                continue
             if not (self.min <= area <= self.max):
                 continue
             pixels = img[li : li + di, lj : lj + dj]
