@@ -357,7 +357,7 @@ num_unmatched = 0
 
 # Keep track of the distances too
 distances = []
-max_omega_diff = 0
+ome_diffs = []
 
 assigned_spots = {}
 for grain_id, (ref_completeness, ref_grain_spots) in ref_spots_dict.items():
@@ -409,13 +409,14 @@ for grain_id, (ref_completeness, ref_grain_spots) in ref_spots_dict.items():
 
             # Compute the difference in omega between the reference and ours
             ome_diff = abs(ref_omega - meas_spots['meas_xys'][matching_idx][2])
-            max_omega_diff = max(ome_diff, max_omega_diff)
+            ome_diffs.append(ome_diff)
 
             # Indicate this spot was assigned
             these_assigned_spots[matching_idx] = True
             num_matched += 1
 
 
+max_omega_diff = max(ome_diffs)
 max_distance = max(distances)
 percent_found = num_matched / (num_matched + num_unmatched) * 100
 print(
@@ -425,7 +426,8 @@ print(
 
 print(f'Mean distance (xy): {np.mean(distances):.4f}')
 print(f'Max distance (xy): {max_distance:.4f}')
-print(f'Max omega diff: {np.degrees(max_omega_diff):.4f}')
+print(f'Mean omega diff (degrees): {np.degrees(np.mean(ome_diffs)):.4f}')
+print(f'Max omega diff (degrees): {np.degrees(max_omega_diff):.4f}')
 num_extra_hkls = 0
 for det_key, det_assignments in assigned_spots.items():
     for grain_id, grain_assignments in det_assignments.items():
