@@ -79,8 +79,8 @@ class SpotFinder:
 
             spots.append(
                 Spot(
-                    int(i),
-                    int(j),
+                    i,
+                    j,
                     max(di, dj),
                     (li, lj, li + di, lj + dj),
                     np.max(pixels[mask]),
