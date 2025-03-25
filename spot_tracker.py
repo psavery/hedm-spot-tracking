@@ -27,6 +27,7 @@ class TrackedSpot(Spot):
         self.i = spot.i
         self.j = spot.j
         self.w = spot.w
+        self.bounding_box = spot.bounding_box
         self.max = spot.max
         self.sum = spot.sum
         self.frame_index = frame_index

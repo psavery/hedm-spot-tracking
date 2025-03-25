@@ -120,20 +120,21 @@ def compute_mean_spot(spot_list: list[TrackedSpot]) -> np.ndarray:
     # width (we can probably do something a little better than that).
     omega_ranges = np.radians([omegas[s.frame_index] for s in spot_list])
     omega_values = [np.mean(x) for x in omega_ranges]
+    sums = np.array([s.sum for s in spot_list])
     widths = np.array([s.w for s in spot_list])
     max_width = widths.max()
     coords = np.array([(s.i, s.j) for s in spot_list])
 
     # We are using a width-weighted omega as the average omega, currently
-    width_weighted_omega = (omega_values * widths).sum() / (widths.sum())
-    width_weighted_coords = (coords * widths[:, np.newaxis]).sum(
+    sum_weighted_omega = (omega_values * sums).sum() / (sums.sum())
+    sum_weighted_coords = (coords * sums[:, np.newaxis]).sum(
         axis=0
-    ) / widths.sum()
+    ) / sums.sum()
 
     # We are using the full range of omegas
     omega_width = (omega_ranges[-1][1] - omega_ranges[0][0]) / 2
     return np.asarray(
-        (*width_weighted_coords, max_width, width_weighted_omega, omega_width)
+        (*sum_weighted_coords, max_width, sum_weighted_omega, omega_width)
     )
 
 
@@ -424,7 +425,7 @@ print(
 
 print(f'Mean distance (xy): {np.mean(distances):.4f}')
 print(f'Max distance (xy): {max_distance:.4f}')
-print(f'Max omega diff: {max_omega_diff:.4f}')
+print(f'Max omega diff: {np.degrees(max_omega_diff):.4f}')
 num_extra_hkls = 0
 for det_key, det_assignments in assigned_spots.items():
     for grain_id, grain_assignments in det_assignments.items():
