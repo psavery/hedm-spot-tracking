@@ -119,9 +119,9 @@ assigned_spots = assign_spots_to_hkls(
     tolerances,
 )
 
-# Compare with output from hexrdgui pull_spots()
+# Compare with output from pull_spots()
 # The `pull_spots()` output is the 'reference output'
-with open('spots_data_dict_from_hexrdgui.pkl', 'rb') as rf:
+with open('pull_spots_output.pkl', 'rb') as rf:
     ref_spots_dict = pickle.load(rf)
 
 # Keep track of which HKLs from `pull_spots()` were matched or
