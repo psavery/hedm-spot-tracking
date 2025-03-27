@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-import numpy as np
 import rtree
 from spot_finder import Spot
 
