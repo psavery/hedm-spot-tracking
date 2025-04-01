@@ -18,7 +18,6 @@ from assign_spots import (
     track_spots,
 )
 from spot_finder import SpotFinder
-from spot_tracker import TrackedSpot
 from write_spots import write_spots
 
 # Whether we should reuse the existing spots file. If we change
@@ -87,21 +86,10 @@ if not use_existing_spots_file or not spots_filename.exists():
     with h5py.File(spots_filename, 'w') as f:
         write_spots(raw_ims_dict, finder, f)
 
-TrackSpotsOutputType = dict[str, dict[int, list[TrackedSpot]]]
-
 # Track, combine, and chunk spots into subpanels
 tracked_spots = track_spots(spots_filename, num_images, list(raw_ims_dict))
 spot_arrays = combine_spots(tracked_spots, omegas)
 spot_arrays = chunk_spots_into_subpanels(spot_arrays, instr)
-
-# Now simulate the spots
-simulated_results = instr.simulate_rotation_series(
-    plane_data,
-    grain_params,
-    eta_ranges,
-    omega_ranges,
-    omega_period,
-)
 
 # Set tolerances for tth, eta, and omega
 tth_tol = np.radians(0.25)
@@ -113,10 +101,14 @@ tolerances = np.array([tth_tol, eta_tol, ome_tol])
 assigned_spots = assign_spots_to_hkls(
     spot_arrays,
     instr,
-    simulated_results,
-    grain_params,
-    eta_period,
     tolerances,
+    eta_period,
+    plane_data,
+    grain_params,
+    eta_ranges,
+    omega_ranges,
+    omega_period,
+    num_images,
 )
 
 # Compare with output from pull_spots()
