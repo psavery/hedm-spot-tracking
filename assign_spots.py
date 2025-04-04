@@ -3,6 +3,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+from scipy.spatial import KDTree
 
 from hexrd.instrument import HEDMInstrument
 from hexrd.material.crystallography import PlaneData
@@ -209,6 +210,8 @@ def assign_spots_to_hkls(
         # Convert the omegas to frame pixels
         meas_pixels[:, 2] = omegas_to_frame_pixels(meas_pixels[:, 2])
 
+        kd_tree = KDTree(meas_pixels)
+
         # Grab some simulated HKLs
         sim_all_hkls = sim_results[1]
         sim_all_xys = sim_results[3]
@@ -250,13 +253,10 @@ def assign_spots_to_hkls(
             skipped_hkls = []
             spots_assigned = []
             for i, ang_crd in enumerate(sim_angles):
-                a = sim_pixels[i]
-                b = meas_pixels
-                differences = np.min((abs(a - b), abs(a - b - n_frames)), axis=0)
-
-                # Find the closest spot
-                distances = np.sqrt((differences**2).sum(axis=1))
-                min_idx = distances.argmin()
+                # Find the closest spot. Include wrapping around to other side.
+                d1, min_idx1 = kd_tree.query(sim_pixels[i])
+                d2, min_idx2 = kd_tree.query(sim_pixels[i] - [0, 0, n_frames])
+                min_idx = min_idx1 if d1 < d2 else min_idx2
 
                 # Use special function to take into account angular wrapping
                 ang_differences = angularDifference(ang_crd, ang_spot_coords[min_idx])
